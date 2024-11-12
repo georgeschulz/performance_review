@@ -6,11 +6,15 @@ from reports.production import production_report
 from reports.sales_data import sales_data_report    
 from reports.work_completion import work_completion_report
 from reports.tech_leads import tech_leads_report
+from reports.unconfirmed_work import unconfirmed_work
+from reports.work_added import work_added
+from reports.ar_report import ar_report
 
 if __name__ == "__main__":
     check_structure()
     callbacks_report()
     timesheets_report()
+    unconfirmed_work()
     attendance_report(
         eight_o_clock_starts=[
             "Kamaal Sherrod",
@@ -24,3 +28,5 @@ if __name__ == "__main__":
         "Ivan Chavez"
     ])
     tech_leads_report()
+    work_added()
+    ar_report()
