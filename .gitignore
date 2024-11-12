@@ -2,3 +2,7 @@
 .env
 venv/
 data/
+outputs/
+*.pyc
+*.csv
+reports/__pycache__/
