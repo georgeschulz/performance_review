@@ -9,6 +9,8 @@ from reports.tech_leads import tech_leads_report
 from reports.unconfirmed_work import unconfirmed_work
 from reports.work_added import work_added
 from reports.ar_report import ar_report
+from reports.price import price_report
+from reports.rate_per_hour_report import rate_per_hour_report
 
 if __name__ == "__main__":
     check_structure()
@@ -30,3 +32,16 @@ if __name__ == "__main__":
     tech_leads_report()
     work_added()
     ar_report()
+    price_report(
+        salespeople=[
+            "Kamaal Sherrod",
+            "Hussam Olabi",
+            "Rob Dively"
+        ]
+    )
+    rate_per_hour_report(
+        custom_joins=[
+            ('Jasmine Wilkes', 'Jasmine Wilkins'),
+            ('James Wilkes', 'James Wilkins')   
+        ]
+    )
