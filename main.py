@@ -2,7 +2,6 @@ from reports.check_structure import check_structure
 from reports.callbacks import callbacks_report
 from reports.timesheets import timesheets_report
 from reports.attendance import attendance_report
-from reports.production import production_report
 from reports.sales_data import sales_data_report    
 from reports.work_completion import work_completion_report
 from reports.tech_leads import tech_leads_report
@@ -11,6 +10,8 @@ from reports.work_added import work_added
 from reports.ar_report import ar_report
 from reports.price import price_report
 from reports.rate_per_hour_report import rate_per_hour_report
+from reports.retention import retention_report
+from reports.calls import calls_report
 
 if __name__ == "__main__":
     check_structure()
@@ -24,7 +25,6 @@ if __name__ == "__main__":
             "Bianca Ramirez"
         ],
     )
-    production_report()
     sales_data_report()
     work_completion_report(excluded_techs=[
         "Ivan Chavez"
@@ -43,5 +43,16 @@ if __name__ == "__main__":
         custom_joins=[
             ('Jasmine Wilkes', 'Jasmine Wilkins'),
             ('James Wilkes', 'James Wilkins')   
+        ],
+        exclude_techs=[
+            "Lawrence Partlow"
         ]
     )
+    retention_report()
+    calls_report(user_mappings=[
+        ("101", "Brian Grumbine"),
+        ("102", "Hussam Olabi"), 
+        ("103", "Kamaal Sherrod"),
+        ("104", "Cindy McKnight"),
+        ("106", "Bianca Ramirez")
+    ])

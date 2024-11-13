@@ -26,8 +26,8 @@ def price_report(salespeople=[]):
         aggfunc='mean'
     )
     
-    # Format values as currency
-    pivot_df = pivot_df.map(lambda x: f'${x:,.2f}')
+    # Format values as currency, leaving NaN cells empty
+    pivot_df = pivot_df.map(lambda x: f'${x:,.2f}' if pd.notnull(x) else '')
     
     # Ensure directory exists
     os.makedirs('outputs', exist_ok=True)
