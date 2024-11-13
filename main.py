@@ -12,9 +12,13 @@ from reports.price import price_report
 from reports.rate_per_hour_report import rate_per_hour_report
 from reports.retention import retention_report
 from reports.calls import calls_report
+from reports.close_rate import close_rate
+from reports.link_accounts import link_accounts
+from reports.first_year_cancels import first_year_cancels
 
 if __name__ == "__main__":
     check_structure()
+    link_accounts()
     callbacks_report()
     timesheets_report()
     unconfirmed_work()
@@ -48,11 +52,23 @@ if __name__ == "__main__":
             "Lawrence Partlow"
         ]
     )
-    retention_report()
+    retention_report(
+        start_date="2022-01-01",
+        end_date="2024-12-31"
+    )
     calls_report(user_mappings=[
         ("101", "Brian Grumbine"),
         ("102", "Hussam Olabi"), 
         ("103", "Kamaal Sherrod"),
         ("104", "Cindy McKnight"),
         ("106", "Bianca Ramirez")
+    ])
+    close_rate(salespeople=[
+        "Kamaal Sherrod",
+        "Hussam Olabi",
+    ])
+    
+    first_year_cancels(salespeople=[
+        "Kamaal Sherrod",
+        "Hussam Olabi",
     ])

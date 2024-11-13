@@ -37,6 +37,6 @@ def check_structure():
     if not os.path.exists("data"):
         os.makedirs("data")
     if not os.path.exists("outputs"):
-        os.makedirs(os.path.join(root_dir, "outputs"))
+        os.makedirs("outputs")
     if not os.path.exists("reports"):
         os.makedirs("reports")

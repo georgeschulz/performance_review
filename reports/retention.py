@@ -1,14 +1,14 @@
 import pandas as pd
 from datetime import datetime
 
-def retention_report():
+def retention_report(start_date, end_date):
     df = pd.read_csv("data/Starts.csv")
     df['Start Date'] = pd.to_datetime(df['Start Date'])
     df['Cancel Date'] = pd.to_datetime(df['Cancel Date'], errors='coerce')
 
     # Define the start and end dates for the report
-    start_date = pd.to_datetime('2022-01-01')
-    end_date = pd.to_datetime('2024-11-01')  # Adjust as per your data's availability
+    start_date = pd.to_datetime(start_date)
+    end_date = pd.to_datetime(end_date)  # Adjust as per your data's availability
 
     months = pd.date_range(start_date, end_date, freq='MS')  # Generate a list of month starts
 
@@ -75,9 +75,9 @@ def retention_report():
             'Final Customers <1yr': final_1yr,
             'Final Customers >1yr': final_long,
             'New Customers Added': new_customers_count,
-            'First Year Retention Rate': round(first_year_retention, 2),
-            'Long Time Customer Retention Rate': round(long_time_retention, 2),
-            'Combined Retention Rate': round(combined_retention, 2)
+            'First Year Cancel Rate': round(100 - first_year_retention, 2),
+            'Long Time Customer Cancel Rate': round(100 - long_time_retention, 2),
+            'Combined Cancel Rate': round(100 - combined_retention, 2)
         }
 
         results.append(month_result)
