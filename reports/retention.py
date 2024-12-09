@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 
 def retention_report(start_date, end_date):
-    df = pd.read_csv("data/Starts.csv")
+    df = pd.read_excel("data/Starts.xls")
     df['Start Date'] = pd.to_datetime(df['Start Date'])
     df['Cancel Date'] = pd.to_datetime(df['Cancel Date'], errors='coerce')
 

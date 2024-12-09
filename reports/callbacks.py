@@ -3,7 +3,7 @@ import pandas as pd
 def callbacks_report():
     pd.options.mode.chained_assignment = None  # Turn off SettingWithCopyWarning
     current_period = pd.read_csv('data/Monthly Invoice Report.csv')
-    historical = pd.read_csv('data/Historical Invoice Report.csv')
+    historical = pd.read_excel('data/Historical Invoice Report.xls')
 
     # Get callbacks from current period
     callbacks = current_period[current_period['Invoice Type'] == 'Call Back']

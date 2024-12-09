@@ -21,12 +21,12 @@ def check_structure():
     assert len(df) >= 5, "Monthly Invoice Report.csv does not have at least 5 rows"
 
     # ensure that Historical Invoice Report exists
-    historical_invoice_report = os.path.join(root_dir, "Historical Invoice Report.csv")
-    assert os.path.exists(historical_invoice_report), "Historical Invoice Report.csv not found"
+    historical_invoice_report = os.path.join(root_dir, "Historical Invoice Report.xls")
+    assert os.path.exists(historical_invoice_report), "Historical Invoice Report.xls not found"
 
     # ensure that it has at least 5 rows
-    df = pd.read_csv(historical_invoice_report)
-    assert len(df) >= 5, "Historical Invoice Report.csv does not have at least 5 rows"
+    df = pd.read_excel(historical_invoice_report)
+    assert len(df) >= 5, "Historical Invoice Report.xls does not have at least 5 rows"
 
     # ensure that Timesheets exists
     timesheets = os.path.join(root_dir, "Timesheets.xlsx")

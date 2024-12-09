@@ -52,8 +52,11 @@ def calls_report(user_mappings=[]):
     # Reindex with full date range to include missing dates
     daily_counts = daily_counts.reindex(date_range, fill_value=0)
     
-    # Calculate averages excluding 0s
-    averages = daily_counts.apply(lambda x: x[x > 0].mean()).round(1)
+    # Calculate averages excluding weekends and 0s
+    averages = pd.Series(index=daily_counts.columns)
+    for column in daily_counts.columns:
+        non_zero_values = daily_counts[column][daily_counts[column] > 0]
+        averages[column] = round(non_zero_values.mean(), 1)
     
     # Create empty row
     empty_row = pd.Series(index=daily_counts.columns, data=[''] * len(daily_counts.columns))

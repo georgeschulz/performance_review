@@ -2,7 +2,7 @@ import pandas as pd
 
 def first_year_cancels(salespeople=[]):
     # Read the CSV
-    df = pd.read_csv("data/Starts.csv")
+    df = pd.read_excel("data/Starts.xls")
     
     # Convert dates to datetime
     df['Start Date'] = pd.to_datetime(df['Start Date'])
