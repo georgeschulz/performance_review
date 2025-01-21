@@ -69,7 +69,6 @@ def get_call_tracking_metrics(start_date, end_date, user):
                 "Duration": call["talk_time"],
                 "Bare Number": format_phone_number(call["caller_number_bare"]),
                 "Source": call["source"],
-                "Recording": "Recording Link" if call.get("audio") else "",
                 "Review": "Review Link",
                 "Airtable_Record": airtable_link(record),
                 "Close Status": record.get("fields", {}).get("Close Status", "")
@@ -99,6 +98,13 @@ if __name__ == "__main__":
             
             # Get the worksheet object
             worksheet = excel_writer.sheets[user[0]]
+            
+            # Convert the range to a table with dark style
+            table_range = f'A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}'
+            worksheet.add_table(table_range, {
+                'style': 'Table Style Medium 2',  # This gives the gray/white alternating rows
+                'columns': [{'header': col} for col in df.columns]
+            })
             
             # Set a larger default row height (60 instead of 40)
             worksheet.set_default_row(height=60)
@@ -175,10 +181,7 @@ if __name__ == "__main__":
                     worksheet.write(row_num, 2, "Inbound", inbound_format)
                 else:
                     worksheet.write(row_num, 2, "Outbound", outbound_format)
-                
-                if row.Recording:  # Only add link if there's a recording
-                    worksheet.write_url(row_num, 9, row._asdict()['Recording'], 
-                                     string='Recording Link', cell_format=link_format)
+      
                 worksheet.write_url(row_num, 10, 
                                  f"https://app.calltrackingmetrics.com/calls#callNav=caller_transcription&callId={row.ID}", 
                                  string='Review Link', cell_format=link_format)
