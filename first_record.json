@@ -1,0 +1,87 @@
+{
+    "id": "recKsNVgXuTae1rVf",
+    "createdTime": "2024-07-03T19:44:20.000Z",
+    "fields": {
+        "Pipeline": "Inside",
+        "Salesperson": {
+            "id": "usrL9TJb6Maq4xCIP",
+            "email": "service@bettertermite.com",
+            "name": "G Schulz"
+        },
+        "Address": "509 Sourwood Ct",
+        "City": "Stafford",
+        "State": "VA",
+        "Zip": "22554",
+        "PestPac Account": "223442",
+        "Phone": "717-222-0697",
+        "Customer Last Name": "Lambakis",
+        "WTR Sales Stage": "Add to PestPac",
+        "Integrated Pipeline Stage": "Not Yet Reached",
+        "Lead Type": "WTR Free Trial Request",
+        "Customer First Name": "Chris",
+        "Claimed Time": "2024-07-03T20:51:42.996Z",
+        "WTR": [
+            "recWgYeBSJDKAXjDe"
+        ],
+        "Close Status": "Lost: Unknown Reason",
+        "LocationID": "122232",
+        "Quotes": [
+            "recYaGYEyG3sfMVfj"
+        ],
+        "Close Date": "2024-09-09",
+        "Linkage Script Run": "Yes",
+        "New Customer Link": "https://app.pestpac.com/location/detail.asp?LocationID=122232",
+        "Next Work Day": "2024-12-31T00:00:00.000Z",
+        "Closed Status (depreceated)": "Open",
+        "Castle Proposal": "https://airtable.com/shrhsKbhMLB5wPpBq?prefill_Lead=recKsNVgXuTae1rVf",
+        "Sales Area": "Sales Territory: Inside",
+        "Google Earth Link": "https://earth.google.com/web/search/509+Sourwood+Ct+Stafford,+VA+22554",
+        "Schedule Link": "https://app.pestpac.com/appointment/quick/default.asp?Mode=CreateReservation&ApptType=&ZipCode=22554&City=Stafford&MapCodeID=&MapCode=&Address=&Address=509%20Sourwood%20Ct&State=VA",
+        "Date Added": "2024-07-03T19:44:20.000Z",
+        "Time Open": 179,
+        "Number Touches": 0,
+        "Insights": " Cycle: 179 Days Touches: 0",
+        "Time Since Last Touch": {
+            "specialValue": "NaN"
+        },
+        "Idleness Score": {
+            "specialValue": "NaN"
+        },
+        "Zillow URL": "https://www.zillow.com/homes/map/509-Sourwood-Ct,-Stafford-VA-22554_rb/",
+        "Customer Full Name": "Chris Lambakis",
+        "Full Name": "Chris Lambakis Lambakis",
+        "Best Fit": "https://django-server-production-77ff.up.railway.app/routeop/search/?address=509%20Sourwood%20Ct%20Stafford%2C%20VA%2022554&search_type=Fast%20Initial%20Close",
+        "Price Sheet Tool": "https://www.internal.bettertermite.com/proposal/create/?phone_number=717-222-0697",
+        "Num Touches": 0,
+        "Description": "Stafford\nNo Touches Yet",
+        "Normalized Phone": "7172220697",
+        "Lead Color": "Gray",
+        "Current Time": "2024-12-30T13:00:04.395Z",
+        "Phone (from WTR)": [
+            "717-222-0697"
+        ],
+        "Zip (from WTR)": [
+            "22554"
+        ],
+        "State (from WTR)": [
+            "VA"
+        ],
+        "City (from WTR)": [
+            "Stafford"
+        ],
+        "Address (from WTR)": [
+            "509 Sourwood Ct"
+        ],
+        "Last Name (from WTR)": [
+            "Lambakis"
+        ],
+        "First Name (from WTR)": [
+            "Chris"
+        ],
+        "Search Command": "717-222-0697",
+        "Qualified": "Yes",
+        "Final Status": "Lost",
+        "Lead Type (Clean)": "WTR Free Trial Request",
+        "ID": "recKsNVgXuTae1rVf"
+    }
+}

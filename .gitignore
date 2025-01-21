@@ -6,3 +6,4 @@ outputs/
 *.pyc
 *.csv
 reports/__pycache__/
+staging/

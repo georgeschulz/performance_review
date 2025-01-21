@@ -1,6 +1,6 @@
 import pandas as pd
 
-def close_rate(salespeople=[]):
+def close_rate(salespeople=[], exclude_channels=[]):
     # Read the CSV file
     df = pd.read_csv('data/Leads-Reporting Export.csv')
     
@@ -20,7 +20,8 @@ def close_rate(salespeople=[]):
     # Calculate metrics for each salesperson and month
     for sp in salespeople:
         sp_data = df[df['Salesperson'] == sp]
-        
+        sp_data = sp_data[~sp_data['Lead Type'].isin(exclude_channels)]
+
         # Group by month
         for month in sorted(sp_data['Month'].dropna().unique()):
             month_data = sp_data[sp_data['Month'] == month]

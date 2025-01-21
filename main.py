@@ -15,6 +15,8 @@ from reports.calls import calls_report
 from reports.close_rate import close_rate
 from reports.link_accounts import link_accounts
 from reports.first_year_cancels import first_year_cancels
+from reports.channel_stats import channel_stats
+from reports.job_not_ready import job_not_ready_report
 
 if __name__ == "__main__":
     check_structure()
@@ -66,9 +68,15 @@ if __name__ == "__main__":
     close_rate(salespeople=[
         "Kamaal Sherrod",
         "Hussam Olabi",
+    ],
+    exclude_channels=[
+        "Outbound",
+        "Sentricon Lead"
     ])
     
     first_year_cancels(salespeople=[
         "Kamaal Sherrod",
         "Hussam Olabi",
     ])
+    channel_stats()
+    job_not_ready_report()

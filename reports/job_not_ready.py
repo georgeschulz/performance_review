@@ -1,6 +1,6 @@
 import pandas as pd
 
-def work_completion_report(excluded_techs=[]):
+def job_not_ready_report(excluded_techs=[]):
     # Read the CSV file
     df = pd.read_csv("data/Work Completion - Stop Data at Start of Day.csv")
     
@@ -37,6 +37,3 @@ def work_completion_report(excluded_techs=[]):
     report.to_csv('outputs/Job Not Ready.csv')
     
     return report
-
-# Display the report
-print(work_completion_report())
