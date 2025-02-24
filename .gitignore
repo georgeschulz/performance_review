@@ -7,3 +7,5 @@ outputs/
 *.csv
 reports/__pycache__/
 staging/
+weekly_review_data/
+weekly_outputs/
