@@ -63,7 +63,7 @@ def interval_cancels(beginning_of_time=None, salespeople=None, current_date=None
     
     # Convert date columns to datetime
     df['Cancel Date'] = pd.to_datetime(df['Cancel Date'], errors='coerce')
-    df['Start Date'] = pd.to_datetime(df['Start Date'], errors='coerce')
+    df['Date Added'] = pd.to_datetime(df['Date Added'], errors='coerce')
     
     # Handle empty Salesperson column by setting it to "Other Rep"
     df['Effective Salesperson'] = df['Salesperson'].fillna("Other Rep")
@@ -81,9 +81,9 @@ def interval_cancels(beginning_of_time=None, salespeople=None, current_date=None
     if beginning_of_time:
         if isinstance(beginning_of_time, str):
             beginning_of_time = pd.to_datetime(beginning_of_time)
-        # Filter both cancel and start dates
+        # Filter both cancel and date added dates
         df = df[((df['Cancel Date'] >= beginning_of_time) & (~df['Cancel Date'].isna())) | 
-                (df['Start Date'] >= beginning_of_time)]
+                (df['Date Added'] >= beginning_of_time)]
     
     # Calculate fiscal year and month start dates
     fiscal_year_start = get_fiscal_year_start(current_date)
@@ -107,14 +107,14 @@ def interval_cancels(beginning_of_time=None, salespeople=None, current_date=None
         mtd_cancel_metrics = calculate_data(mtd_cancels, 'Cancel Date')
         
         # Year-to-date starts
-        ytd_starts = sp_data[(sp_data['Start Date'] >= fiscal_year_start) & 
-                            (sp_data['Start Date'] <= current_date)]
-        ytd_start_metrics = calculate_data(ytd_starts, 'Start Date')
+        ytd_starts = sp_data[(sp_data['Date Added'] >= fiscal_year_start) & 
+                            (sp_data['Date Added'] <= current_date)]
+        ytd_start_metrics = calculate_data(ytd_starts, 'Date Added')
         
         # Month-to-date starts
-        mtd_starts = sp_data[(sp_data['Start Date'] >= month_start) & 
-                            (sp_data['Start Date'] <= current_date)]
-        mtd_start_metrics = calculate_data(mtd_starts, 'Start Date')
+        mtd_starts = sp_data[(sp_data['Date Added'] >= month_start) & 
+                            (sp_data['Date Added'] <= current_date)]
+        mtd_start_metrics = calculate_data(mtd_starts, 'Date Added')
         
         # Add to results
         ytd_mtd_results.append({
@@ -156,13 +156,13 @@ def interval_cancels(beginning_of_time=None, salespeople=None, current_date=None
                                    (sp_data['Cancel Date'] <= week_end)]
             
             # Weekly starts (just for this week)
-            weekly_starts = sp_data[(sp_data['Start Date'] >= current_monday) & 
-                                  (sp_data['Start Date'] <= week_end)]
+            weekly_starts = sp_data[(sp_data['Date Added'] >= current_monday) & 
+                                  (sp_data['Date Added'] <= week_end)]
             
             # Only add to results if there's any data for the week
             if len(weekly_cancels) > 0 or len(weekly_starts) > 0:
                 weekly_cancel_metrics = calculate_data(weekly_cancels, 'Cancel Date')
-                weekly_start_metrics = calculate_data(weekly_starts, 'Start Date')
+                weekly_start_metrics = calculate_data(weekly_starts, 'Date Added')
                 
                 # YTD cancellations up to and including the end of this week
                 ytd_cancels = sp_data[(sp_data['Cancel Date'] >= fiscal_year_start) & 
@@ -175,14 +175,14 @@ def interval_cancels(beginning_of_time=None, salespeople=None, current_date=None
                 mtd_cancel_metrics = calculate_data(mtd_cancels, 'Cancel Date')
                 
                 # YTD starts up to and including the end of this week
-                ytd_starts = sp_data[(sp_data['Start Date'] >= fiscal_year_start) & 
-                                   (sp_data['Start Date'] <= week_end)]
-                ytd_start_metrics = calculate_data(ytd_starts, 'Start Date')
+                ytd_starts = sp_data[(sp_data['Date Added'] >= fiscal_year_start) & 
+                                   (sp_data['Date Added'] <= week_end)]
+                ytd_start_metrics = calculate_data(ytd_starts, 'Date Added')
                 
                 # MTD starts up to and including the end of this week
-                mtd_starts = sp_data[(sp_data['Start Date'] >= week_month_start) & 
-                                   (sp_data['Start Date'] <= week_end)]
-                mtd_start_metrics = calculate_data(mtd_starts, 'Start Date')
+                mtd_starts = sp_data[(sp_data['Date Added'] >= week_month_start) & 
+                                   (sp_data['Date Added'] <= week_end)]
+                mtd_start_metrics = calculate_data(mtd_starts, 'Date Added')
                 
                 mega_report_results.append({
                     'Salesperson': sp,
@@ -302,12 +302,12 @@ def interval_cancels(beginning_of_time=None, salespeople=None, current_date=None
             weekly_cancels = sp_data[(sp_data['Cancel Date'] >= current_monday) & 
                                    (sp_data['Cancel Date'] <= week_end)]
             
-            weekly_starts = sp_data[(sp_data['Start Date'] >= current_monday) & 
-                                  (sp_data['Start Date'] <= week_end)]
+            weekly_starts = sp_data[(sp_data['Date Added'] >= current_monday) & 
+                                  (sp_data['Date Added'] <= week_end)]
             
             if len(weekly_cancels) > 0 or len(weekly_starts) > 0:
                 weekly_cancel_metrics = calculate_data(weekly_cancels, 'Cancel Date')
-                weekly_start_metrics = calculate_data(weekly_starts, 'Start Date')
+                weekly_start_metrics = calculate_data(weekly_starts, 'Date Added')
                 
                 weekly_results.append({
                     'Salesperson': sp,

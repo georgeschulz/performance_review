@@ -35,7 +35,7 @@ def get_value_by_rep(df, rep_col, rep_name, target_col):
 
 def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01", sales_reps=None):
     """
-    Creates a weekly scorecard Excel report (weekly_scorecard.xlsx) that summarizes,
+    Creates a weekly scorecard Excel report (Weekly Scorecard.xlsx) that summarizes,
     for each sales rep, the following metrics for:
       - Week-to-date (WTD)
       - Month-to-date (MTD)
@@ -98,8 +98,8 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
 
             # --- Sales Data (Total Sales and Average Sale) ---
             if period == "Week":
-                total_sales = get_value_from_df(sales_weekly_df, "Salesperson", rep, "Week Start", week_start_str, "Weekly Total Sales")
-                avg_sale = get_value_from_df(sales_weekly_df, "Salesperson", rep, "Week Start", week_start_str, "Weekly Average Sale")
+                total_sales = get_value_from_df(sales_weekly_df, "Salesperson", rep, "Week Start", week_start_str, "Total Sales")
+                avg_sale = get_value_from_df(sales_weekly_df, "Salesperson", rep, "Week Start", week_start_str, "Average Sale")
             elif period == "MTD":
                 total_sales = get_value_by_rep(sales_ytd_mtd_df, "Salesperson", rep, "MTD Total Sales")
                 avg_sale = get_value_by_rep(sales_ytd_mtd_df, "Salesperson", rep, "MTD Average Sale")
@@ -137,7 +137,7 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
     scorecard_df = scorecard_df[sorted_columns]
 
     # --- Write to Excel with header information ---
-    output_path = os.path.join("weekly_outputs", "weekly_scorecard.xlsx")
+    output_path = os.path.join("weekly_outputs", "Weekly Scorecard.xlsx")
     writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
     
     workbook = writer.book
