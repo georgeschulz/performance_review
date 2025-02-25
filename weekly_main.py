@@ -15,9 +15,10 @@ if __name__ == "__main__":
     }
 
     sales_reps = ["Hussam Olabi", "Kamaal Sherrod", "Rob Dively"]
+    reps_for_weekly_scorecard = ["Hussam Olabi", "Kamaal Sherrod"]
     
     interval_close_rate(beginning_of_time=beginning_of_time, salespeople=sales_reps)
     interval_sales(beginning_of_time=beginning_of_time, salespeople=sales_reps)
     interval_calls(beginning_of_time=beginning_of_time, replacements=replacements)
     interval_cancels(beginning_of_time=beginning_of_time, salespeople=sales_reps)
-    weekly_scorecard_report(first_day_of_week, beginning_of_time, sales_reps)
+    weekly_scorecard_report(first_day_of_week, beginning_of_time, reps_for_weekly_scorecard)

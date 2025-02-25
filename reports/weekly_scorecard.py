@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from reports.interval_calls import interval_calls
 from reports.interval_sales import interval_sales
 from reports.interval_cancels import interval_cancels
+from reports.interval_close_rate import interval_close_rate
 
 def get_value_from_df(df, rep_col, rep_name, week_start_col, week_start_val, target_col):
     """
@@ -47,6 +48,7 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
       - Average First Year Price
       - Cancels
       - Starts Count
+      - Close Rate
       
     The final Excel file includes a header with the report's date criteria.
     """
@@ -77,11 +79,17 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
     cancels_weekly_df = cancels_data.get('weekly', pd.DataFrame())
     cancels_ytd_mtd_df = cancels_data.get('ytd_mtd', pd.DataFrame())
     # For cancels, the rep column is 'Salesperson'
+    
+    # --- Get Close Rate Data ---
+    close_rate_data = interval_close_rate(beginning_of_time=beginning_of_time, salespeople=sales_reps, current_date=week_end_str)
+    close_rate_weekly_df = close_rate_data.get('weekly', pd.DataFrame())
+    close_rate_ytd_mtd_df = close_rate_data.get('ytd_mtd', pd.DataFrame())
+    # For close rate, the rep column is 'Salesperson'
 
     # Build a dictionary to hold the final metrics per rep and period.
     # We will have columns keyed by (rep, period) and rows for each metric.
     periods = ["Week", "MTD", "YTD"]
-    # Metrics: Total Calls, Total Sales, Avg First Year Price, Cancels, Starts Count
+    # Metrics: Total Calls, Total Sales, Avg First Year Price, Cancels, Starts Count, Close Rate
     final_data = {}
 
     for rep in sales_reps:
@@ -121,13 +129,22 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
                 starts_val = get_value_by_rep(cancels_ytd_mtd_df, "Salesperson", rep, "YTD Starts")
             cell["Cancels"] = cancels_val
             cell["Starts Count"] = starts_val
+            
+            # --- Close Rate ---
+            if period == "Week":
+                close_rate_val = get_value_from_df(close_rate_weekly_df, "Salesperson", rep, "Week Start", week_start_str, "Close Rate")
+            elif period == "MTD":
+                close_rate_val = get_value_by_rep(close_rate_ytd_mtd_df, "Salesperson", rep, "MTD Close Rate")
+            else:  # YTD
+                close_rate_val = get_value_by_rep(close_rate_ytd_mtd_df, "Salesperson", rep, "YTD Close Rate")
+            cell["Close Rate"] = close_rate_val
 
             final_data[(rep, period)] = cell
 
     # Create a DataFrame with rows as metrics and MultiIndex columns (rep, period)
     scorecard_df = pd.DataFrame(final_data)
     # Ensure the rows are in the desired order
-    scorecard_df = scorecard_df.reindex(["Total Calls", "Total Sales", "Avg First Year Price", "Cancels", "Starts Count"])
+    scorecard_df = scorecard_df.reindex(["Total Calls", "Total Sales", "Avg First Year Price", "Cancels", "Starts Count", "Close Rate"])
 
     # Sort the columns by rep and period order (WTD, then MTD, then YTD)
     sorted_columns = []
@@ -163,6 +180,9 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
     currency_format = workbook.add_format({
         'num_format': '$#,##0.00',  # Format as currency with 2 decimal places
     })
+    percentage_format = workbook.add_format({
+        'num_format': '0.00"%"',  # Format as percentage with 2 decimal places
+    })
     
     # Write first level of MultiIndex (rep names) with merged cells
     col_offset = 1  # Start after the "Metric" column
@@ -191,6 +211,9 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
             # Apply currency format to Total Sales and Avg First Year Price
             if label in ["Total Sales", "Avg First Year Price"]:
                 worksheet.write(5 + i, 1 + j, data_values[i, j], currency_format)
+            # Apply percentage format to Close Rate
+            elif label == "Close Rate":
+                worksheet.write(5 + i, 1 + j, data_values[i, j], percentage_format)  # Remove division by 100 since the value is already a percentage
             else:
                 worksheet.write(5 + i, 1 + j, data_values[i, j])
     
