@@ -122,9 +122,7 @@ def interval_close_rate(beginning_of_time=None, salespeople=[], exclude_channels
             'MTD Close Rate': mtd_metrics['Close Rate']  # Store as numeric value
         })
     
-    # Convert YTD/MTD results to DataFrame and save
     ytd_mtd_df = pd.DataFrame(ytd_mtd_results)
-    ytd_mtd_df.to_csv('weekly_outputs/Interval Close Rate - YTD MTD.csv', index=False)
     
     # Initialize results for mega report (weekly + MTD + YTD)
     mega_report_results = []
@@ -203,7 +201,7 @@ def interval_close_rate(beginning_of_time=None, salespeople=[], exclude_channels
             csv_df[col] = csv_df[col].apply(lambda x: f"{x:.2f}%")
         
     # Also save as Excel with minimal formatting (just bold for close rate columns)
-    excel_path = 'weekly_outputs/Mega Close Rate Report.xlsx'
+    excel_path = 'weekly_outputs/Close Rate Report.xlsx'
     mega_report_df.to_excel(excel_path, index=False, engine='openpyxl')
     
     # Apply formatting to the Excel file
