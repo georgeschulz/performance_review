@@ -44,11 +44,85 @@ def calculate_sales_data(data):
         'Average Sale': total_sales / count if count > 0 else 0
     }
 
+def generate_mtd_drill_down(df, salespeople, current_date=None):
+    """
+    Generate MTD drill-down reports for each rep with specific columns
+    
+    Parameters:
+    - df: DataFrame containing the sales data
+    - salespeople: list of salespeople to generate reports for
+    - current_date: datetime, date to use as "now" (defaults to today)
+    """
+    if current_date is None:
+        current_date = datetime.datetime.now()
+    
+    # Ensure weekly_outputs directory exists
+    os.makedirs('weekly_outputs', exist_ok=True)
+    
+    # Get the start of the current month
+    month_start = get_month_start(current_date)
+    
+    # For each salesperson, create a drill-down report
+    for rep in salespeople:
+        # Filter data for this rep and MTD
+        rep_data = df[(df['Salesperson'] == rep) & 
+                      (df['Add Date'] >= month_start) & 
+                      (df['Add Date'] <= current_date)]
+        
+        # Select only the requested columns
+        drill_down_data = rep_data[['Location', 'First Name', 'Last Name', 
+                                    'Service Code', 'Add Date', 'Start Date', 
+                                    'First Year ACV']]
+        
+        # Sort by Add Date
+        drill_down_data = drill_down_data.sort_values(by='Add Date')
+        
+        # Calculate total MTD sales for this rep
+        total_sales = drill_down_data['First Year ACV'].replace('[\$,]', '', regex=True).astype(float).sum()
+        
+        # Create a filename with the rep's name
+        rep_name_for_file = rep.replace(' ', '_').lower()
+        file_path = f'weekly_outputs/{rep_name_for_file}_mtd_drill_down.xlsx'
+        
+        # Save to Excel
+        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+            drill_down_data.to_excel(writer, index=False, sheet_name='MTD Drill Down')
+            
+            # Add a summary row at the bottom
+            workbook = writer.book
+            worksheet = writer.sheets['MTD Drill Down']
+            
+            # Add a total row
+            row_num = len(drill_down_data) + 2  # +2 for header and 1-based indexing
+            worksheet.cell(row=row_num, column=1, value="TOTAL")
+            worksheet.cell(row=row_num, column=7, value=total_sales)
+            worksheet.cell(row=row_num, column=7).number_format = '$#,##0.00'
+            
+            # Format the First Year ACV column
+            for row_idx in range(2, row_num):  # Start from 2 to skip header
+                cell = worksheet.cell(row=row_idx, column=7)  # Column 7 is First Year ACV
+                cell.number_format = '$#,##0.00'
+            
+            # Adjust column widths
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                
+                # Find the maximum length in the column
+                for cell in column:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                
+                # Set the column width (with some padding)
+                adjusted_width = max_length + 4
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+
 def interval_sales(beginning_of_time=None, salespeople=["Hussam Olabi", "Kamaal Sherrod", "Rob Dively"], exclude_sale_types=[], current_date=None):
     """
     Generate interval-based sales reports:
     1. Year-to-date and month-to-date sales
     2. Weekly sales (Monday to Sunday) with MTD and YTD metrics for each week
+    3. MTD drill-down reports for each rep with specific columns
     
     Parameters:
     - beginning_of_time: datetime or string, minimum date to include sales from
@@ -261,6 +335,10 @@ def interval_sales(beginning_of_time=None, salespeople=["Hussam Olabi", "Kamaal 
         current_monday += timedelta(days=7)
     
     weekly_df = pd.DataFrame(weekly_results)
+    
+    # Generate MTD drill-down reports for each salesperson
+    # Only generate for the actual salespeople (not "Other Rep")
+    generate_mtd_drill_down(df, salespeople, current_date)
     
     return {
         'ytd_mtd': ytd_mtd_df,
