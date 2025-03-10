@@ -7,7 +7,7 @@ from reports.weekly_scorecard import weekly_scorecard_report
 if __name__ == "__main__":
     # Example usage
     beginning_of_time = "2023-01-01"
-    first_day_of_week = "2025-02-17"
+    first_day_of_week = "2025-03-03"
     replacements ={
         "hussamobetter@gmail.com": "Hussam Olabi",
         "kamaalsbetter@gmail.com": "Kamaal Sherrod",

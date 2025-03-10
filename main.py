@@ -18,6 +18,9 @@ from reports.first_year_cancels import first_year_cancels
 from reports.channel_stats import channel_stats
 from reports.job_not_ready import job_not_ready_report
 
+START_DATE = "2023-02-01"
+END_DATE = "2025-02-28"
+
 if __name__ == "__main__":
     check_structure()
     link_accounts()
@@ -55,8 +58,8 @@ if __name__ == "__main__":
         ]
     )
     retention_report(
-        start_date="2022-01-01",
-        end_date="2024-12-31"
+        start_date=START_DATE,
+        end_date=END_DATE
     )
     calls_report(user_mappings=[
         ("101", "Brian Grumbine"),
