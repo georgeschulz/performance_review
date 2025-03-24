@@ -30,12 +30,16 @@ def get_month_start(current_date=None):
 
 def calculate_sales_data(data):
     """
-    Calculate sales data from a dataframe of sales
+    Calculate sales data from a dataframe of sales, subtracting Amount Before from First Year ACV
     """
-    # Convert First Year ACV to numeric, removing $ and commas
+    # Convert First Year ACV and Amount Before to numeric, removing $ and commas
     sales_values = data['First Year ACV'].replace('[\$,]', '', regex=True).astype(float)
+    amount_before = data['Amount Before'].astype(float)
     
-    total_sales = sales_values.sum()
+    # Calculate net sales (First Year ACV - Amount Before)
+    net_sales = sales_values - amount_before
+    
+    total_sales = net_sales.sum()
     count = len(data)
     
     return {
@@ -69,16 +73,18 @@ def generate_mtd_drill_down(df, salespeople, current_date=None):
                       (df['Add Date'] >= month_start) & 
                       (df['Add Date'] <= current_date)]
         
-        # Select only the requested columns
+        # Select columns, now including Amount Before
         drill_down_data = rep_data[['Location', 'First Name', 'Last Name', 
-                                    'Service Code', 'Add Date', 'Start Date', 
-                                    'First Year ACV']]
+                                   'Service Code', 'Add Date', 'Start Date', 
+                                   'First Year ACV', 'Amount Before']]
         
         # Sort by Add Date
         drill_down_data = drill_down_data.sort_values(by='Add Date')
         
-        # Calculate total MTD sales for this rep
-        total_sales = drill_down_data['First Year ACV'].replace('[\$,]', '', regex=True).astype(float).sum()
+        # Calculate totals
+        acv_total = drill_down_data['First Year ACV'].replace('[\$,]', '', regex=True).astype(float).sum()
+        amount_before_total = drill_down_data['Amount Before'].astype(float).sum()
+        net_total = acv_total - amount_before_total
         
         # Create a filename with the rep's name
         rep_name_for_file = rep.replace(' ', '_').lower()
@@ -88,19 +94,35 @@ def generate_mtd_drill_down(df, salespeople, current_date=None):
         with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
             drill_down_data.to_excel(writer, index=False, sheet_name='MTD Drill Down')
             
-            # Add a summary row at the bottom
             workbook = writer.book
             worksheet = writer.sheets['MTD Drill Down']
             
-            # Add a total row
+            # Add total rows
             row_num = len(drill_down_data) + 2  # +2 for header and 1-based indexing
-            worksheet.cell(row=row_num, column=1, value="TOTAL")
-            worksheet.cell(row=row_num, column=7, value=total_sales)
+            
+            # Add First Year ACV total
+            worksheet.cell(row=row_num, column=1, value="TOTAL First Year ACV")
+            worksheet.cell(row=row_num, column=7, value=acv_total)
             worksheet.cell(row=row_num, column=7).number_format = '$#,##0.00'
             
-            # Format the First Year ACV column
+            # Add Amount Before total
+            worksheet.cell(row=row_num + 1, column=1, value="TOTAL Amount Before")
+            worksheet.cell(row=row_num + 1, column=8, value=amount_before_total)
+            worksheet.cell(row=row_num + 1, column=8).number_format = '$#,##0.00'
+            
+            # Add Net total
+            worksheet.cell(row=row_num + 2, column=1, value="NET TOTAL")
+            worksheet.cell(row=row_num + 2, column=7, value=net_total)
+            worksheet.cell(row=row_num + 2, column=7).number_format = '$#,##0.00'
+            
+            # Format the currency columns
             for row_idx in range(2, row_num):  # Start from 2 to skip header
-                cell = worksheet.cell(row=row_idx, column=7)  # Column 7 is First Year ACV
+                # Format First Year ACV column
+                cell = worksheet.cell(row=row_idx, column=7)
+                cell.number_format = '$#,##0.00'
+                
+                # Format Amount Before column
+                cell = worksheet.cell(row=row_idx, column=8)
                 cell.number_format = '$#,##0.00'
             
             # Adjust column widths
@@ -108,14 +130,49 @@ def generate_mtd_drill_down(df, salespeople, current_date=None):
                 max_length = 0
                 column_letter = column[0].column_letter
                 
-                # Find the maximum length in the column
                 for cell in column:
                     if cell.value:
                         max_length = max(max_length, len(str(cell.value)))
                 
-                # Set the column width (with some padding)
                 adjusted_width = max_length + 4
                 worksheet.column_dimensions[column_letter].width = adjusted_width
+
+def calculate_amount_before(price_analysis_df):
+    """
+    Calculate the Amount Before column based on cancelled setups from Starts.csv
+    """
+    # Read the Starts.csv file
+    starts_df = pd.read_csv('weekly_review_data/Starts.csv')
+    
+    # Convert date columns to datetime
+    starts_df['Cancel Date'] = pd.to_datetime(starts_df['Cancel Date'], errors='coerce')
+    price_analysis_df['Start Date'] = pd.to_datetime(price_analysis_df['Start Date'], errors='coerce')
+    
+    # Initialize Amount Before column
+    price_analysis_df['Amount Before'] = 0.0
+    
+    # Iterate through Price Analysis rows
+    for idx, row in price_analysis_df.iterrows():
+        location = row['Location']  # Changed from Location Code to Location
+        setup_id = row['SetupID']
+        start_date = row['Start Date']
+        
+        if pd.isna(start_date):
+            continue
+            
+        # Find relevant cancellations in Starts df
+        mask = (
+            (starts_df['Location Code'] == location) &  # Starts.csv uses Location Code
+            (starts_df['SetupID'] != setup_id) &
+            (~starts_df['Cancel Date'].isna()) &
+            (abs((starts_df['Cancel Date'] - start_date).dt.days) <= 30)
+        )
+        
+        # Sum the Recurring Value for matching rows
+        amount_before = starts_df.loc[mask, 'Recurring Value'].sum()
+        price_analysis_df.at[idx, 'Amount Before'] = amount_before
+    
+    return price_analysis_df
 
 def interval_sales(beginning_of_time=None, salespeople=["Hussam Olabi", "Kamaal Sherrod", "Rob Dively"], exclude_sale_types=[], current_date=None):
     """
@@ -141,6 +198,10 @@ def interval_sales(beginning_of_time=None, salespeople=["Hussam Olabi", "Kamaal 
     
     # Read the CSV file
     df = pd.read_csv('weekly_review_data/Price Analysis.csv')
+    
+    # Calculate Amount Before and save transformed file
+    df = calculate_amount_before(df)
+    df.to_csv('weekly_review_data/Price Analysis_transformed.csv', index=False)
     
     # Convert Add Date to datetime
     df['Add Date'] = pd.to_datetime(df['Add Date'], errors='coerce')
