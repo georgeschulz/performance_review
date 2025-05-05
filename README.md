@@ -8,6 +8,5 @@
 # Weekly Reports to Download
 
 1) Leads-Reporting Export.csv - This is the raw data from the leads report in Airtable
-2) Calls.csv - This comes from CTM export
-3) Price Analysis.csv - Report Writer (Sales 2.0 > Price Analysis)
-4) Starts.xls - Report Writer (Epic Number Cruncher > Starts)
+2) Price Analysis.csv - Report Writer (Sales 2.0 > Price Analysis)
+3) Starts.csv - Report Writer (Epic Number Cruncher > Starts)

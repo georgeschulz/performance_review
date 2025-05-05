@@ -19,7 +19,7 @@ from reports.channel_stats import channel_stats
 from reports.job_not_ready import job_not_ready_report
 
 START_DATE = "2023-02-01"
-END_DATE = "2025-02-28"
+END_DATE = "2025-03-31"
 
 if __name__ == "__main__":
     check_structure()
@@ -61,13 +61,13 @@ if __name__ == "__main__":
         start_date=START_DATE,
         end_date=END_DATE
     )
-    calls_report(user_mappings=[
-        ("101", "Brian Grumbine"),
-        ("102", "Hussam Olabi"), 
-        ("103", "Kamaal Sherrod"),
-        ("104", "Cindy McKnight"),
-        ("106", "Bianca Ramirez")
-    ])
+    # calls_report(user_mappings=[
+    #     ("101", "Brian Grumbine"),
+    #     ("102", "Hussam Olabi"), 
+    #     ("103", "Kamaal Sherrod"),
+    #     ("104", "Cindy McKnight"),
+    #     ("106", "Bianca Ramirez")
+    # ])
     close_rate(salespeople=[
         "Kamaal Sherrod",
         "Hussam Olabi",

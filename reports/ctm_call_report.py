@@ -55,7 +55,7 @@ def get_month_start(current_date=None):
     
     return datetime.datetime(current_date.year, current_date.month, 1)
 
-def ctm_call_report(week_start=None, agents=None, exclude_call_statuses=[], replacements={}, current_date=None):
+def ctm_call_report(week_start=None, agents=None, exclude_call_statuses=[], replacements={}, current_date=None, beginning_of_time=None):
     """
     Generate call report for a specific week using Call Tracking Metrics API
     
@@ -65,9 +65,12 @@ def ctm_call_report(week_start=None, agents=None, exclude_call_statuses=[], repl
     - exclude_call_statuses: list of call statuses to exclude (not used with CTM API)
     - replacements: dict of agent name replacements
     - current_date: datetime, date to use as "now" (defaults to today)
+    - beginning_of_time: datetime or string, minimum date to include (used for compatibility with other reports)
     
     Returns a dict with weekly, mtd, and ytd metrics for the specified week
     """
+    # beginning_of_time parameter is ignored for CTM as we query specific date ranges
+    
     # Ensure output directory exists
     os.makedirs('weekly_outputs', exist_ok=True)
     

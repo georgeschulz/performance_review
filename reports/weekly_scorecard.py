@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # Import the interval report functions
-from reports.interval_calls import interval_calls
+from reports.ctm_call_report import ctm_call_report  # Use CTM for calls instead
 from reports.interval_sales import interval_sales
 from reports.interval_cancels import interval_cancels
 from reports.interval_close_rate import interval_close_rate
@@ -52,56 +52,53 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
       
     The final Excel file includes a header with the report's date criteria.
     """
-    if sales_reps is None:
-        sales_reps = ["Hussam Olabi", "Kamaal Sherrod", "Rob Dively"]
-
     # Convert first day of week to datetime and compute week end (assuming Monday-Sunday week)
     first_day = pd.to_datetime(first_day_of_week_str)
     week_end = first_day + timedelta(days=6)
     week_start_str = first_day.strftime('%Y-%m-%d')
     week_end_str = week_end.strftime('%Y-%m-%d')
 
-    # --- Get Calls Data ---
-    # Call interval_calls with current_date set to the week_end
-    calls_data = interval_calls(beginning_of_time=beginning_of_time, agents=sales_reps, current_date=week_end_str)
+    # --- Get Calls Data using CTM API ---
+    # Call ctm_call_report with week_start and agents
+    calls_data = ctm_call_report(
+        week_start=first_day, 
+        agents=sales_reps,
+        beginning_of_time=beginning_of_time  # Pass this for compatibility
+    )
+    # Extract the dataframes
     calls_weekly_df = calls_data.get('weekly', pd.DataFrame())
-    calls_ytd_mtd_df = calls_data.get('ytd_mtd', pd.DataFrame())
-    # For calls, the rep column is 'Agent' and the week start column is 'Week Start'
+    calls_mtd_df = calls_data.get('mtd', pd.DataFrame())
+    calls_ytd_df = calls_data.get('ytd', pd.DataFrame())
     
     # --- Get Sales Data ---
     sales_data = interval_sales(beginning_of_time=beginning_of_time, salespeople=sales_reps, current_date=week_end_str)
     sales_weekly_df = sales_data.get('weekly', pd.DataFrame())
     sales_ytd_mtd_df = sales_data.get('ytd_mtd', pd.DataFrame())
-    # For sales, the rep column is 'Salesperson'
     
     # --- Get Cancels/Starts Data ---
     cancels_data = interval_cancels(beginning_of_time=beginning_of_time, salespeople=sales_reps, current_date=week_end_str)
     cancels_weekly_df = cancels_data.get('weekly', pd.DataFrame())
     cancels_ytd_mtd_df = cancels_data.get('ytd_mtd', pd.DataFrame())
-    # For cancels, the rep column is 'Salesperson'
     
     # --- Get Close Rate Data ---
     close_rate_data = interval_close_rate(beginning_of_time=beginning_of_time, salespeople=sales_reps, current_date=week_end_str)
     close_rate_weekly_df = close_rate_data.get('weekly', pd.DataFrame())
     close_rate_ytd_mtd_df = close_rate_data.get('ytd_mtd', pd.DataFrame())
-    # For close rate, the rep column is 'Salesperson'
 
     # Build a dictionary to hold the final metrics per rep and period.
-    # We will have columns keyed by (rep, period) and rows for each metric.
     periods = ["Week", "MTD", "YTD"]
-    # Metrics: Total Calls, Total Sales, Avg First Year Price, Cancels, Starts Count, Close Rate
     final_data = {}
 
     for rep in sales_reps:
         for period in periods:
             cell = {}
-            # --- Total Calls ---
+            # --- Total Calls (now from CTM) ---
             if period == "Week":
-                calls_val = get_value_from_df(calls_weekly_df, "Agent", rep, "Week Start", week_start_str, "Total Calls")
+                calls_val = get_value_from_df(calls_weekly_df, "Agent", rep, "Week Start", week_start_str, "Weekly Total Calls")
             elif period == "MTD":
-                calls_val = get_value_by_rep(calls_ytd_mtd_df, "Agent", rep, "MTD Total Calls")
+                calls_val = get_value_by_rep(calls_mtd_df, "Agent", rep, "MTD Total Calls")
             else:  # YTD
-                calls_val = get_value_by_rep(calls_ytd_mtd_df, "Agent", rep, "YTD Total Calls")
+                calls_val = get_value_by_rep(calls_ytd_df, "Agent", rep, "YTD Total Calls")
             cell["Total Calls"] = calls_val
 
             # --- Sales Data (Total Sales and Average Sale) ---
@@ -213,7 +210,7 @@ def weekly_scorecard_report(first_day_of_week_str, beginning_of_time="2023-01-01
                 worksheet.write(5 + i, 1 + j, data_values[i, j], currency_format)
             # Apply percentage format to Close Rate
             elif label == "Close Rate":
-                worksheet.write(5 + i, 1 + j, data_values[i, j], percentage_format)  # Remove division by 100 since the value is already a percentage
+                worksheet.write(5 + i, 1 + j, data_values[i, j], percentage_format)
             else:
                 worksheet.write(5 + i, 1 + j, data_values[i, j])
     
