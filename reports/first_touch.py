@@ -6,11 +6,26 @@ import os
 import json
 from dotenv import load_dotenv
 import pytz  # Import pytz for timezone handling # Removed
+import numpy as np # Add numpy import
 
 load_dotenv()
 
-START_DATE = "2025-04-21"
-END_DATE = "2025-05-03" 
+# --- NEW: Phone Formatting Function ---
+def format_phone_number(phone_str):
+    """Formats a string containing digits into xxx-xxx-xxxx."""
+    digits = re.sub(r'\D', '', str(phone_str)) # Ensure input is string and get only digits
+    if len(digits) == 10:
+        return f"{digits[0:3]}-{digits[3:6]}-{digits[6:10]}"
+    elif len(digits) == 11 and digits.startswith('1'): # Handle optional leading '1'
+        return f"{digits[1:4]}-{digits[4:7]}-{digits[7:11]}"
+    else:
+        # Return original string if format is unexpected, or just digits if preferred
+        return phone_str # Or return digits
+# --- END NEW ---
+
+# START_DATE = "2025-04-14"
+START_DATE = "2025-04-26"
+END_DATE = "2025-05-02" 
 # END_DATE = "2025-04-21" 
 
 # --- Business Hours Constants ---
@@ -19,6 +34,52 @@ BUSINESS_END_TIME = time(17, 0)
 BUSINESS_TIMEZONE = pytz.timezone('US/Eastern')
 WEEKDAYS = set(range(5)) # Monday=0 to Friday=4
 lead_types_to_include = ["Form Fill", "Thumbtack", "WTR Free Trial Request", "Email Lead"]
+
+
+def calculate_business_minutes_between(start_dt_aware, end_dt_aware):
+    """
+    Calculates the total number of minutes that fall within business hours
+    (Mon-Fri, 8:00-17:00 ET) between two timezone-aware datetimes.
+    """
+    if pd.isna(start_dt_aware) or pd.isna(end_dt_aware) or end_dt_aware <= start_dt_aware:
+        return 0 # Or pd.NA based on how you want to handle invalid inputs
+
+    total_accountable_seconds = 0
+    # Ensure calculations are done in the business timezone
+    start_local = start_dt_aware.astimezone(BUSINESS_TIMEZONE)
+    end_local = end_dt_aware.astimezone(BUSINESS_TIMEZONE)
+
+    current_date = start_local.date()
+    while current_date <= end_local.date():
+        if current_date.weekday() in WEEKDAYS:
+            # Define business hours for the current day in the local timezone
+            try:
+                bh_start = BUSINESS_TIMEZONE.localize(datetime.combine(current_date, BUSINESS_START_TIME))
+                bh_end = BUSINESS_TIMEZONE.localize(datetime.combine(current_date, BUSINESS_END_TIME))
+            except pytz.exceptions.AmbiguousTimeError:
+                 # Handle DST transition if start/end falls on ambiguous time
+                 bh_start = BUSINESS_TIMEZONE.localize(datetime.combine(current_date, BUSINESS_START_TIME), is_dst=True) # or False depending on context
+                 bh_end = BUSINESS_TIMEZONE.localize(datetime.combine(current_date, BUSINESS_END_TIME), is_dst=True) # or False
+            except pytz.exceptions.NonExistentTimeError:
+                 # Handle DST transition if start/end falls on non-existent time (e.g., skip an hour forward)
+                 # Adjust time or handle as needed, e.g., move to next valid time
+                 bh_start = BUSINESS_TIMEZONE.normalize(BUSINESS_TIMEZONE.localize(datetime.combine(current_date, BUSINESS_START_TIME) + timedelta(hours=1), is_dst=None))
+                 bh_end = BUSINESS_TIMEZONE.normalize(BUSINESS_TIMEZONE.localize(datetime.combine(current_date, BUSINESS_END_TIME) + timedelta(hours=1), is_dst=None))
+
+
+            # Calculate the overlap between the overall interval [start_local, end_local]
+            # and the business hours interval for the current day [bh_start, bh_end]
+            overlap_start = max(start_local, bh_start)
+            overlap_end = min(end_local, bh_end)
+
+            # Add the duration of the overlap if it's positive
+            if overlap_end > overlap_start:
+                total_accountable_seconds += (overlap_end - overlap_start).total_seconds()
+
+        # Move to the next day
+        current_date += timedelta(days=1)
+
+    return total_accountable_seconds / 60
 
 
 def is_during_business_hours(dt_aware):
@@ -121,7 +182,7 @@ for index, row in df.iterrows():
     first_call_agent = None
     first_call_datetime = None
     total_elapsed_minutes = pd.NA
-    # total_accountable_minutes = pd.NA # Removed
+    total_accountable_minutes = pd.NA # Initialize new column value
 
     if calls:
         print(f"  Found {len(calls)} raw calls in CTM for {normalized_phone}.")
@@ -166,12 +227,26 @@ for index, row in df.iterrows():
 
         else:
              print(f"  No valid calls found on or after lead date {lead_date.strftime('%Y-%m-%d %H:%M:%S %Z')}.")
+             # If no first call, elapsed and accountable minutes remain NA
+             pass # No need to calculate accountable if no first call
 
     else:
         print(f"  No calls found in CTM for {normalized_phone}.")
+        # If no calls found, elapsed and accountable minutes remain NA
+        pass
 
-    # Determine Business Hours Status
+    # Determine Business Hours Status for the lead submission time
     business_hours_status = is_during_business_hours(lead_date)
+
+    # Calculate Total Accountable Minutes
+    if pd.notna(first_call_datetime) and pd.notna(lead_date) and total_elapsed_minutes >= 0:
+        if business_hours_status == 'In Hours':
+            total_accountable_minutes = total_elapsed_minutes
+        elif business_hours_status == 'Out of Hours':
+            # Calculate minutes within business hours between lead and first call
+            total_accountable_minutes = calculate_business_minutes_between(lead_date, first_call_datetime)
+        else: # Handle 'Unknown' status if necessary
+             total_accountable_minutes = pd.NA # Or some other default
 
     report_data.append({
         "Customer Full Name": row['Customer Full Name'],
@@ -180,10 +255,11 @@ for index, row in df.iterrows():
         "Salesperson": salesperson,
         "Business Hours Status": business_hours_status,
         "First Call Agent": first_call_agent,
-        "Date Added": row['Date Added'],
+        "Date Submitted": row['Date Added'], # Keep original datetime for sorting/formatting later
+        "Date Added": row['Date Added'], # Keep original datetime for sorting/formatting later
         "First Touch": first_call_datetime, # Renamed from "First Call Datetime"
         "Total Elapsed Minutes": total_elapsed_minutes,
-        # "Total Accountable Minutes": total_accountable_minutes # Removed
+        "Total Accountable Minutes": total_accountable_minutes
     })
 
 
@@ -192,28 +268,40 @@ if report_data:
     report_df = pd.DataFrame(report_data)
 
     # --- Sort by Business Hours Status and then Date Added ---
-    report_df = report_df.sort_values(by=["Business Hours Status", "Date Added"], ascending=[True, True])
+    # Sort by Date Submitted first to keep chronological order within groups
+    report_df = report_df.sort_values(by=["Business Hours Status", "Date Submitted"], ascending=[True, True])
 
     # Ensure the output directory exists
     output_dir = 'weekly_outputs'
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, 'first_touch.xlsx')
 
-    # Format datetime columns for CSV output
-    dt_format = "%A %I:%M %p" # e.g., Monday 08:30 AM
-    report_df['Date Added'] = report_df['Date Added'].dt.strftime(dt_format)
-    # Handle potential NaT values in 'First Touch' before formatting
-    report_df['First Touch'] = pd.to_datetime(report_df['First Touch']).dt.strftime(dt_format)
+    # Keep original datetime columns for Excel formatting
+    report_df_excel = report_df.copy()
 
-    # Round minutes for better readability in CSV
+    # --- Apply Phone Formatting for Excel Output ---
+    report_df_excel['Phone'] = report_df_excel['Phone'].apply(format_phone_number)
+    # --- End Apply Phone Formatting ---
+
+    # Format datetime columns for display (will be overridden by Excel formats)
+    dt_format_day_time = "%A %I:%M %p" # e.g., Monday 08:30 AM
+    dt_format_date_only = "%m/%d/%y" # e.g., 04/21/25
+
+    report_df['Date Submitted'] = pd.to_datetime(report_df['Date Submitted']).dt.strftime(dt_format_date_only)
+    report_df['Date Added'] = pd.to_datetime(report_df['Date Added']).dt.strftime(dt_format_day_time)
+    # Handle potential NaT values in 'First Touch' before formatting
+    report_df['First Touch'] = pd.to_datetime(report_df['First Touch']).dt.strftime(dt_format_day_time)
+
+    # Round minutes for better readability
     if "Total Elapsed Minutes" in report_df.columns:
            report_df["Total Elapsed Minutes"] = report_df["Total Elapsed Minutes"].round(2)
-    # if "Total Accountable Minutes" in report_df.columns: # Removed
-    #        report_df["Total Accountable Minutes"] = report_df["Total Accountable Minutes"].round(2) # Removed
+    if "Total Accountable Minutes" in report_df.columns:
+           report_df["Total Accountable Minutes"] = report_df["Total Accountable Minutes"].round(2)
 
     # report_df.to_csv(output_path, index=False) # Commented out CSV saving
 
     # --- Write to Excel with Formatting ---
+    # Use report_df_excel which has the original datetime objects for Excel formatting
     with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
         workbook = writer.book
         worksheet = workbook.add_worksheet('First Touch Report') # Custom sheet name
@@ -234,20 +322,71 @@ if report_data:
             'align': 'center',
             'valign': 'vcenter'
         })
-        date_format_excel = workbook.add_format({'num_format': 'dddd hh:mm AM/PM', 'align': 'left'})
+        date_format_excel_day_time = workbook.add_format({'num_format': 'dddd hh:mm AM/PM', 'align': 'left'})
+        date_format_excel_date_only = workbook.add_format({'num_format': 'mm/dd/yy', 'align': 'left'})
         default_format = workbook.add_format({'align': 'left'})
+        # --- New formats for Average row ---
+        average_label_format = workbook.add_format({
+            'bold': True,
+            'fg_color': '#F2F2F2', # Light grey background
+            'align': 'right',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        average_value_format = workbook.add_format({
+            'bold': True,
+            'num_format': '0.0', # One decimal place
+            'fg_color': '#F2F2F2',
+            'align': 'left',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        average_na_format = workbook.add_format({ # Format for N/A case
+            'bold': True,
+            'fg_color': '#F2F2F2',
+            'align': 'left',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        # --- New formats for Percentage row ---
+        percentage_label_format = workbook.add_format({
+            'bold': True,
+            'fg_color': '#F2F2F2', # Light grey background
+            'align': 'right',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        percentage_value_format = workbook.add_format({
+            'bold': True,
+            'num_format': '0.0%', # Percentage format
+            'fg_color': '#F2F2F2',
+            'align': 'left',
+            'valign': 'vcenter',
+            'border': 1
+        })
+        percentage_na_format = workbook.add_format({ # Format for N/A percentage
+            'bold': True,
+            'fg_color': '#F2F2F2',
+            'align': 'left',
+            'valign': 'vcenter',
+            'border': 1
+        })
 
         # Write Headers
-        col_names = report_df.columns.tolist()
+        col_names = report_df_excel.columns.tolist() # Get columns from the df with original data types
         for col_num, value in enumerate(col_names):
             worksheet.write(0, col_num, value, header_format)
 
         # --- Write Data Grouped by Business Hours Status ---
         current_row = 1 # Start writing data from row 1 (below headers)
-        # Ensure data is sorted correctly for grouping display
-        report_df = report_df.sort_values(by=["Business Hours Status", "Date Added"], ascending=[True, True])
+        total_below_5_min_count = 0 # Initialize total counter for < 5 min
+        total_called_count = 0      # Initialize total counter for leads with a call
+        # group_below_5_min_counts = {} # Dictionary to store counts per group - No longer needed directly
 
-        for status, group_df in report_df.groupby("Business Hours Status"):
+        # Ensure data is sorted correctly for grouping display
+        report_df_excel = report_df_excel.sort_values(by=["Business Hours Status", "Date Submitted"], ascending=[True, True])
+
+        for status, group_df in report_df_excel.groupby("Business Hours Status"):
             # Write the sub-header row spanning columns
             worksheet.merge_range(current_row, 0, current_row, len(col_names) - 1, f"{status} Leads", subheader_format)
             worksheet.set_row(current_row, 20) # Set height for sub-header row
@@ -257,31 +396,178 @@ if report_data:
             for index, data_row in group_df.iterrows():
                 for col_num, col_name in enumerate(col_names):
                     cell_value = data_row[col_name]
-                    cell_format = default_format
-                    # Apply specific formats
-                    if isinstance(cell_value, (datetime, pd.Timestamp)):
-                        # Convert timezone-aware to naive for xlsxwriter if needed, or handle directly
+                    cell_format = default_format # Start with default format
+
+                    # Handle NaT/NaN first
+                    if pd.isna(cell_value):
+                        cell_value = '' # Write empty string for NaN/NaT
+                        # Keep default_format for NaT/NaN values
+                    # Check for datetime type only if value is not NA
+                    elif isinstance(cell_value, (datetime, pd.Timestamp)):
+                        # Convert timezone-aware to naive for xlsxwriter if needed
                         if cell_value.tzinfo is not None:
                              # Excel doesn't handle tz well, write as naive local
                              cell_value = cell_value.tz_convert(BUSINESS_TIMEZONE).tz_localize(None)
-                        cell_format = date_format_excel
-                    elif pd.isna(cell_value):
-                         cell_value = '' # Write empty string for NaN/NaT
+
+                        # Choose format based on column name
+                        if col_name == "Date Submitted":
+                            cell_format = date_format_excel_date_only
+                        elif col_name == "Date Added" or col_name == "First Touch":
+                            cell_format = date_format_excel_day_time
+                        # else: # If other datetime columns exist, they use default or need specific formats
+                        #    pass # Keep default_format or add other conditions
+
+                    # For non-NA, non-datetime values, default_format is already set
+
+                    # elif pd.isna(cell_value): # This check is now redundant due to the check at the beginning
+                    #      cell_value = '' # Write empty string for NaN/NaT
 
                     worksheet.write(current_row, col_num, cell_value, cell_format)
                 current_row += 1
-            current_row += 1 # Add a blank row between groups
+
+            # --- Calculate and Write Average Row ---
+            if not group_df.empty:
+                # Calculate average, coercing errors and dropping NA
+                valid_minutes = pd.to_numeric(group_df['Total Accountable Minutes'], errors='coerce').dropna()
+                average_minutes = valid_minutes.mean() if not valid_minutes.empty else None
+
+                # Find the column index for 'Total Accountable Minutes'
+                try:
+                    avg_col_index = col_names.index('Total Accountable Minutes')
+                except ValueError:
+                    avg_col_index = -1 # Should not happen if column exists
+
+                # Write the label spanning first few columns (e.g., first 4)
+                merge_end_col = min(3, len(col_names) - 2) # Ensure merge doesn't go beyond penultimate column
+                if merge_end_col >= 0:
+                    worksheet.merge_range(current_row, 0, current_row, merge_end_col, f"Average Accountable Minutes ({status}):", average_label_format)
+                    # Fill blank cells in merged range for border consistency if needed (optional)
+                    for i in range(1, merge_end_col + 1):
+                         worksheet.write_blank(current_row, i, '', average_label_format)
+
+                # Write the average value or N/A
+                if avg_col_index != -1:
+                    if average_minutes is not None:
+                        worksheet.write(current_row, avg_col_index, round(average_minutes, 1), average_value_format)
+                    else:
+                        worksheet.write(current_row, avg_col_index, 'N/A', average_na_format)
+                # Optionally fill other cells in the average row with the grey background/border
+                for i in range(len(col_names)):
+                    if i <= merge_end_col:
+                        continue # Skip cells covered by merge
+                    if i != avg_col_index:
+                        worksheet.write_blank(current_row, i, '', average_na_format) # Use na_format for consistent bg/border
+
+                worksheet.set_row(current_row, 20) # Set height for average row
+                current_row += 1
+            # --- End of Average Row section ---
+
+            # --- Calculate and Write Percentage Row for < 5 Minutes ---
+            if not group_df.empty:
+                 # Get numeric series, dropping NA (represents leads with a calculated time)
+                 valid_minutes_series = pd.to_numeric(group_df['Total Accountable Minutes'], errors='coerce').dropna()
+                 group_called_count = len(valid_minutes_series) # Count of leads with a call in this group
+                 group_below_5_min_count = (valid_minutes_series < 5).sum() # Count < 5 min within those called
+
+                 # Update total counts
+                 total_called_count += group_called_count
+                 total_below_5_min_count += group_below_5_min_count
+
+                 # Calculate percentage
+                 if group_called_count > 0:
+                     percentage_below_5 = group_below_5_min_count / group_called_count
+                     display_value = percentage_below_5
+                     display_format = percentage_value_format
+                 else:
+                     display_value = "N/A"
+                     display_format = percentage_na_format
+
+                 # Reuse merge_end_col and avg_col_index from average calculation
+                 if merge_end_col >= 0:
+                     worksheet.merge_range(current_row, 0, current_row, merge_end_col, f"% Called < 5 Min ({status}):", percentage_label_format)
+                     # Fill blank cells in merged range
+                     for i in range(1, merge_end_col + 1):
+                          worksheet.write_blank(current_row, i, '', percentage_label_format)
+
+                 if avg_col_index != -1: # Assuming percentage displayed in same column as average
+                     worksheet.write(current_row, avg_col_index, display_value, display_format)
+
+                 # Fill other cells in the percentage row
+                 for i in range(len(col_names)):
+                     if i <= merge_end_col: continue
+                     if i != avg_col_index:
+                         worksheet.write_blank(current_row, i, '', percentage_label_format) # Use label format for consistency
+
+                 worksheet.set_row(current_row, 20) # Set height for percentage row
+                 current_row += 1
+            # --- End of Percentage Row section ---
+
+            # Add a blank row between groups
+            worksheet.write_blank(current_row, 0, '', None) # Ensure truly blank row if needed
+            current_row += 1
+
+        # --- Write Total Percentage Row at the end ---
+        if report_df_excel.empty: # Handle case where there's no data at all
+            worksheet.write(current_row, 0, "No data to process.", default_format)
+            current_row +=1
+        else:
+            # Find column indices again (could be stored from before)
+            try:
+                avg_col_index = col_names.index('Total Accountable Minutes')
+            except ValueError:
+                avg_col_index = -1
+            merge_end_col = min(3, len(col_names) - 2)
+
+            # Calculate total percentage
+            if total_called_count > 0:
+                 total_percentage_below_5 = total_below_5_min_count / total_called_count
+                 total_display_value = total_percentage_below_5
+                 total_display_format = percentage_value_format
+            else:
+                 total_display_value = "N/A"
+                 total_display_format = percentage_na_format
+
+            # Write total percentage label
+            if merge_end_col >= 0:
+                worksheet.merge_range(current_row, 0, current_row, merge_end_col, "Total % Called < 5 Min:", percentage_label_format)
+                for i in range(1, merge_end_col + 1):
+                     worksheet.write_blank(current_row, i, '', percentage_label_format)
+
+            # Write total percentage value
+            if avg_col_index != -1:
+                worksheet.write(current_row, avg_col_index, total_display_value, total_display_format)
+
+            # Fill other cells in total percentage row
+            for i in range(len(col_names)):
+                 if i <= merge_end_col: continue
+                 if i != avg_col_index:
+                     worksheet.write_blank(current_row, i, '', percentage_label_format)
+
+            worksheet.set_row(current_row, 20) # Set height for total percentage row
+            current_row += 1
+        # --- End of Total Percentage Row section ---
 
         # --- Adjust Column Widths ---
         for col_num, col_name in enumerate(col_names):
-            # Find max length in the column data
+            # Find max length in the column data (use the formatted string version for length calculation)
             try:
-                 # Handle potential NaNs and convert others to string to measure length
-                max_len = max(group_df[col_name].astype(str).apply(len).max() for _, group_df in report_df.groupby("Business Hours Status"))
+                # Use the already formatted report_df for string length calculation
+                # Handle potential NaN values when calculating max length
+                str_series = report_df.iloc[group_df.index][col_name].astype(str)
+                # Replace 'nan', 'NaT' etc. representation with empty string for length calculation if desired
+                # str_series = str_series.replace(['nan', 'NaT'], '', regex=False)
+                max_len = max(str_series.apply(len).max() for _, group_df in report_df_excel.groupby("Business Hours Status") if not group_df.empty)
+
                 # Also consider header length
                 header_len = len(col_name)
-                # Consider formatted date length (approximate)
-                date_len_approx = 25 if "Date" in col_name or "Touch" in col_name else 0
+
+                # Consider formatted date length (approximate) - adjusted for new date formats
+                date_len_approx = 0
+                if col_name == "Date Submitted":
+                    date_len_approx = 10 # "mm/dd/yy"
+                elif col_name == "Date Added" or col_name == "First Touch":
+                    date_len_approx = 25 # "dddd hh:mm AM/PM"
+
                 # Add some padding
                 column_width = max(max_len, header_len, date_len_approx) + 2
             except (KeyError, ValueError, TypeError): # Handle empty groups, non-string data, or TypeError if max() receives an empty sequence
@@ -291,23 +577,18 @@ if report_data:
             column_width = min(column_width, 50)
             worksheet.set_column(col_num, col_num, column_width)
 
-        # --- Apply Conditional Formatting to 'Total Elapsed Minutes' ---
+        # --- Apply Conditional Formatting to 'Total Accountable Minutes' ---
         try:
-            elapsed_minutes_col_index = col_names.index("Total Elapsed Minutes")
+            # Find the index of the target column
+            target_col_name = "Total Accountable Minutes" # Changed from "Total Elapsed Minutes"
+            target_col_index = col_names.index(target_col_name)
             # Column letter (e.g., 'A', 'B', ...) based on index
-            elapsed_minutes_col_letter = chr(ord('A') + elapsed_minutes_col_index)
-            # Define the range: From row 2 down to the last data row written
-            # current_row represents the *next* row to write, so the last written row is current_row - 1
-            # We need to account for header (row 0) and sub-header rows. The exact last row might vary slightly.
-            # Apply formatting to the entire column range where data *could* be.
-            # Max row in Excel is 1048576, but let's use a reasonable upper limit like current_row + len(report_df)
-            # or simply use the calculated current_row as the end point.
-            # Let's apply from row 2 (first data row potential start) to the last row written (current_row -1)
-            # The range needs to skip the header and sub-header rows.
-            # It's simpler to apply it to the whole column range and let it affect only numeric cells.
-            formatting_range = f'{elapsed_minutes_col_letter}2:{elapsed_minutes_col_letter}{current_row}' # Apply from row 2 downwards
+            target_col_letter = chr(ord('A') + target_col_index)
 
-            # Define formats for conditional formatting
+            # Define the range: Apply from row 2 downwards in the target column
+            formatting_range = f'{target_col_letter}2:{target_col_letter}{current_row}'
+
+            # Define formats for conditional formatting (reuse existing formats)
             format_green = workbook.add_format({'bg_color': '#C6EFCE', 'font_color': '#006100'}) # Green fill, dark green text
             format_yellow = workbook.add_format({'bg_color': '#FFEB9C', 'font_color': '#9C6500'}) # Yellow fill, dark yellow text
             format_red = workbook.add_format({'bg_color': '#FFC7CE', 'font_color': '#9C0006'}) # Red fill, dark red text
@@ -346,7 +627,7 @@ if report_data:
                                                             'value': 60,
                                                             'format': format_dark_red})
         except ValueError:
-            print("Warning: 'Total Elapsed Minutes' column not found. Skipping conditional formatting.")
+            print("Warning: 'Total Accountable Minutes' column not found. Skipping conditional formatting.")
         except IndexError:
              print("Warning: Could not determine column letter for conditional formatting.")
 
