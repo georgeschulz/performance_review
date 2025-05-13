@@ -7,7 +7,7 @@ import subprocess
 if __name__ == "__main__":
     # Example usage
     beginning_of_time = "2023-01-01"
-    first_day_of_week = "2025-04-28"
+    first_day_of_week = "2025-05-05"
     replacements ={
         "hussamobetter@gmail.com": "Hussam Olabi",
         "kamaalsbetter@gmail.com": "Kamaal Sherrod",

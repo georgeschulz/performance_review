@@ -3,7 +3,7 @@ import os
 
 def price_report(salespeople=[]):
     # Read the Excel file
-    df = pd.read_excel("data/Price Analysis.xls")
+    df = pd.read_excel("data/Price Analysis.xlsx")
     
     # Convert Start Date to datetime if it isn't already
     df['Start Date'] = pd.to_datetime(df['Start Date'])
